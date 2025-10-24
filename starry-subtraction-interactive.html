@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Starry Crew – Interactive Subtraction (0–10) + Counters</title>
+<style>
+  :root { --maxw: 720px; --linew: 680px; }
+
+  body{
+    margin:0; padding:48px 16px 64px;
+    background: radial-gradient(1200px 600px at 30% -10%, #28106a, #0a0720 60%, #000);
+    color:#fff; font-family: system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
+    text-align:center;
+  }
+  h1{ margin:0 0 8px; font-weight:800; letter-spacing:.2px;
+      text-shadow:0 0 14px #a992ff; }
+  .controls{
+    display:inline-flex; gap:8px; align-items:center; flex-wrap:wrap;
+    background:#2b1a66aa; border:1px solid #7e6dff66;
+    border-radius:14px; padding:10px 12px; margin-top:8px;
+    box-shadow:0 0 12px #5d2dff44 inset;
+  }
+  input[type=number]{
+    width:72px; font-size:18px; text-align:center;
+    border-radius:10px; border:1px solid #8f78ff;
+    padding:6px 8px; color:#fff; background:#12063b;
+  }
+  button{
+    font-size:16px; border:0; border-radius:10px; padding:9px 14px;
+    background:#7b5dff; color:#fff; cursor:pointer;
+    box-shadow:0 0 10px #a48fff;
+  }
+  button:hover:not(:disabled){ background:#9a82ff; }
+  button:disabled{ opacity:.6; cursor:default; }
+
+  .wrap{ margin:28px auto 0; width:min(96vw,var(--maxw)); }
+
+  /* Number line */
+  .numberline{
+    position:relative; height:4px; width:var(--linew); margin:40px auto 12px;
+    background:#ffffff55; border-radius:2px; box-shadow:0 0 10px #8f78ff;
+  }
+  .tick{ position:absolute; top:-10px; width:2px; height:24px; background:#fff; }
+  .label{ position:absolute; top:28px; width:40px; margin-left:-20px; text-align:center; }
+  .dot{
+    position:absolute; top:-18px; width:26px; height:26px; border-radius:50%;
+    background: radial-gradient(circle, #c9b6ff, #5d2dff);
+    border:2px solid #fff; box-shadow:0 0 15px #b38bff,0 0 26px #5d2dff;
+    transition:left .35s ease; will-change:left,transform;
+  }
+  .trail{
+    position:absolute; top:-8px; width:8px; height:8px; border-radius:50%;
+    background:rgba(200,150,255,.75); pointer-events:none; animation:fade .8s forwards;
+  }
+  @keyframes fade{ from{opacity:1;transform:scale(1)} to{opacity:0;transform:scale(2)} }
+
+  /* Goal + result */
+  #goal, #result{ margin-top:10px; min-height:1.2em; }
+  #goal {
+  display: inline-block;
+  margin-top: 40px;           /* increased spacing below the number line */
+  padding: 6px 14px;
+  border-radius: 999px;
+  background: #1e134d99;
+  border: 1px solid #7e6dff66;
+  color: #dcd4ff;
+  font-size: 18px;
+  text-shadow: 0 0 4px #8f78ff55;
+}
+ }
+
+  .row{
+    display:flex; justify-content:center; gap:8px; flex-wrap:wrap;
+    margin:28px auto 0;        /* EXTRA space pushes counters lower */
+    width:min(96vw,var(--maxw));
+  }
+
+  /* Counters row */
+  .counters-wrap{
+    background:#1c1347a6; border:1px solid #6d57ff66; border-radius:12px;
+    padding:16px 14px; margin-top:18px;
+  }
+  .counters{
+    display:grid; grid-template-columns: repeat(10, 36px); gap:8px; place-content:center;
+  }
+  .cube{
+    width:36px; height:36px; border-radius:8px;
+    background: linear-gradient(145deg,#7f65ff,#b9a6ff);
+    border:2px solid #fff; box-shadow:0 0 10px #9b86ff55;
+  }
+  .cube.off{
+    background: #2a2459;
+    border-color:#c8bfff66;
+    box-shadow:none; filter:grayscale(.3) brightness(.9);
+  }
+
+  .toggle{
+    display:inline-flex; align-items:center; gap:6px; margin-top:10px; color:#cfc7ff;
+    user-select:none; cursor:pointer;
+  }
+
+  .kbd{ font:600 12px/1 monospace; background:#0006; padding:2px 6px; border-radius:6px; }
+</style>
+</head>
+<body>
+  <h1>🌟 Starry Crew – Interactive Subtraction (0–10)</h1>
+  <p>Set a problem, <strong>Place Star</strong>, then <strong>count back</strong> one step per click. You can also press <span class="kbd">Space</span> or <span class="kbd">←</span>.</p>
+
+  <div class="controls" role="group" aria-label="Subtraction inputs">
+    <input type="number" id="a" min="0" max="10" value="6" aria-label="Minuend (first number)">
+    <span aria-hidden="true">−</span>
+    <input type="number" id="b" min="0" max="10" value="3" aria-label="Subtrahend (second number)">
+    <button id="place">Place Star</button>
+    <button id="step" disabled>Count Back (1)</button>
+    <button id="reset">Reset</button>
+  </div>
+
+  <div class="wrap">
+    <div id="line" class="numberline" aria-label="Number line from 0 to 10">
+      <div id="dot" class="dot" aria-label="Star"></div>
+    </div>
+    <div id="goal"></div>   <!-- clearly below the line now -->
+  </div>
+
+  <div class="row counters-wrap" id="cwrap" aria-live="polite">
+    <div style="margin-bottom:8px; color:#e9e4ff">Counters</div>
+    <div id="counters" class="counters" aria-label="Counters row"></div>
+    <label class="toggle"><input type="checkbox" id="toggleCounters" checked> Show counters</label>
+  </div>
+
+  <div id="result" aria-live="polite"></div>
+
+<script>
+(() => {
+  const line = document.getElementById('line');
+  const dot  = document.getElementById('dot');
+  const aEl  = document.getElementById('a');
+  const bEl  = document.getElementById('b');
+  const placeBtn = document.getElementById('place');
+  const stepBtn  = document.getElementById('step');
+  const resetBtn = document.getElementById('reset');
+  const goal = document.getElementById('goal');
+  const result = document.getElementById('result');
+
+  const countersEl = document.getElementById('counters');
+  const cwrap = document.getElementById('cwrap');
+  const toggleCounters = document.getElementById('toggleCounters');
+
+  const DOT_OFFSET = 13;
+  let cubes = [];
+
+  function stepPx(){
+    const w = line.getBoundingClientRect().width;
+    return w > 0 ? (w / 10) : 68;
+  }
+
+  function drawTicks() {
+    Array.from(line.querySelectorAll('.tick,.label')).forEach(n=>n.remove());
+    const s = stepPx();
+    for (let i=0;i<=10;i++){
+      const t = document.createElement('div');
+      t.className = 'tick'; t.style.left = `${i*s}px`; line.appendChild(t);
+      const lab = document.createElement('div');
+      lab.className = 'label'; lab.style.left = `${i*s}px`; lab.textContent = i; line.appendChild(lab);
+    }
+  }
+
+  function placeDot(val){ dot.style.left = `${val*stepPx() - DOT_OFFSET}px`; }
+  function sparkle(val){
+    const sp = document.createElement('div'); sp.className='trail';
+    sp.style.left = `${val*stepPx() - 4}px`; line.appendChild(sp);
+    setTimeout(()=>sp.remove(), 900);
+  }
+
+  // tiny click "boing"
+  let audio;
+  function boing(){
+    if (!audio) { try{ audio = new (window.AudioContext||window.webkitAudioContext)(); }catch(e){ return; } }
+    if (audio.state === 'suspended') audio.resume().catch(()=>{});
+    const o = audio.createOscillator(); const g = audio.createGain();
+    o.type='sine'; o.frequency.setValueAtTime(520, audio.currentTime);
+    o.frequency.exponentialRampToValueAtTime(330, audio.currentTime + 0.18);
+    g.gain.setValueAtTime(0.18, audio.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.0001, audio.currentTime + 0.18);
+    o.connect(g).connect(audio.destination); o.start(); o.stop(audio.currentTime + 0.2);
+  }
+
+  function buildCounters(){
+    countersEl.innerHTML = ''; cubes = [];
+    for (let i=0;i<10;i++){
+      const cube = document.createElement('div');
+      cube.className = 'cube';
+      countersEl.appendChild(cube);
+      cubes.push(cube);
+    }
+  }
+  function setCounters(count){
+    cubes.forEach((c,i)=> c.classList.toggle('off', i >= count));
+  }
+
+  // state
+  let start = 0, need = 0, current = 0, armed = false;
+
+  function arm() {
+    const A = clamp(parseInt(aEl.value),0,10);
+    const B = clamp(parseInt(bEl.value),0,10);
+    if (Number.isNaN(A) || Number.isNaN(B)) return alert('Enter numbers 0–10.');
+    if (B > A) return alert('Subtrahend can’t be bigger than minuend.');
+    start = A; need = B; current = A; armed = true;
+
+    placeDot(A); result.textContent = '';
+    goal.textContent = `Goal: count back ${need} time${need===1?'':'s'} from ${start}.`;
+    setCounters(start);
+
+    stepBtn.disabled = (need===0);
+    stepBtn.textContent = 'Count Back (1)';
+  }
+
+  function stepOnce(){
+    if (!armed || need<=0) return;
+    current -= 1; need -= 1;
+    placeDot(current); sparkle(current); boing();
+    setCounters(current);
+
+    goal.textContent = need>0
+      ? `Keep counting back: ${need} more step${need===1?'':'s'}.`
+      : `All done! ${start} − ${parseInt(bEl.value)} = ${start - parseInt(bEl.value)}`;
+
+    stepBtn.disabled = (need===0);
+    if (need===0){
+      result.textContent = `${start} − ${parseInt(bEl.value)} = ${start - parseInt(bEl.value)}`;
+    }
+  }
+
+  function reset(){
+    armed=false; need=0; start=0; current=0;
+    placeDot(0); goal.textContent=''; result.textContent='';
+    stepBtn.disabled=true; stepBtn.textContent='Count Back (1)';
+    setCounters(0);
+  }
+
+  function clamp(n, lo, hi){ return Math.min(hi, Math.max(lo, n)); }
+
+  placeBtn.addEventListener('click', arm);
+  stepBtn .addEventListener('click', stepOnce);
+  resetBtn.addEventListener('click', reset);
+
+  window.addEventListener('keydown', (e)=>{
+    if (e.key === ' ' || e.key === 'Spacebar' || e.code === 'Space'){ e.preventDefault(); stepOnce(); }
+    if (e.key === 'ArrowLeft'){ e.preventDefault(); stepOnce(); }
+    if (e.key && e.key.toLowerCase && e.key.toLowerCase() === 'r'){ reset(); }
+  });
+
+  toggleCounters.addEventListener('change', ()=>{
+    cwrap.style.display = toggleCounters.checked ? '' : 'none';
+  });
+
+  // init
+  function initAll(){
+    drawTicks();
+    buildCounters();
+    setCounters(0);
+    placeDot(0);
+  }
+  if (document.readyState === 'loading'){
+    document.addEventListener('DOMContentLoaded', initAll);
+  } else {
+    initAll();
+  }
+
+  // keep aligned on resize
+  let rAF;
+  window.addEventListener('resize', ()=>{
+    cancelAnimationFrame(rAF);
+    rAF = requestAnimationFrame(()=>{ drawTicks(); placeDot(current); });
+  });
+})();
+</script>
+</body>
+</html>
